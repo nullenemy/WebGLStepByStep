@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>WebGL2 Step By Step</title>
+</head>
+
+<body>
+</body>
+<script>
+    var gl;
+
+    function main() {
+        initGL();
+    }
+
+    function initGL() {
+        let canvas = document.createElement("canvas");
+
+
+        // what happens if you drop these two lines?
+        // answer: the canvas.width and canvas.height
+        // will be set to their default value, which is
+        // 300 for width and 150 for height;
+        // when the canvas.width and height is different
+        // from the value in css styling. the content on
+        // canvas will be scaled in the browser.
+        // but as we are drawing nothing on the canvas
+        // so it won't make any difference.
+        canvas.width = 800;
+        canvas.height = 600;
+        canvas.style.width = "800px";
+        canvas.style.height = "600px";
+        canvas.style.border = "5px solid black";
+        document.body.appendChild(canvas);
+
+        const gl = canvas.getContext("webgl2");
+        gl.clearColor(1, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+
+    window.onload = main;
+</script>
+
+</html>
