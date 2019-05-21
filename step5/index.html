@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>WebGL2 Step By Step</title>
+    <script src="MV.js"></script>
+</head>
+
+<body>
+</body>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+#version 300 es
+precision mediump float;
+in vec3 aVertexPosition;
+in vec3 vColor;
+out vec4 color;
+void main(void) {
+    gl_PointSize = 1.0;
+    gl_Position = vec4(aVertexPosition, 1.0);
+    color = vec4(vColor, 1.0);
+}
+</script>
+<script id="fragment-shader" type="x-shader/x-fragment">
+#version 300 es
+precision mediump float;
+in vec4 color;
+
+out vec4 fragColor;
+void main(void){
+    fragColor = color;
+}
+</script>
+<script>
+    var gl, program;
+
+    var NumPoints = 50000;
+    var points = [];
+    var colors = [];
+    var NumTimesToSubdivide = 3;
+    var dotVertexBuffer, colorBuffer;
+    function main() {
+        initGL();
+        initProgram();
+        initBuffers();
+        draw();
+        // draw();
+    }
+
+    function initGL() {
+        let canvas = document.createElement("canvas");
+        canvas.width = 800;
+        canvas.height = 600;
+        canvas.style.width = "800px";
+        canvas.style.height = "600px";
+        canvas.style.border = "5px solid black";
+        document.body.appendChild(canvas);
+
+        gl = canvas.getContext("webgl2");
+        gl.clearColor(1, 1, 1, 1);
+        gl.enable(gl.DEPTH_TEST);
+    }
+
+    function getShader(id) {
+        const script = document.getElementById(id);
+        const shaderString = script.text.trim();
+
+        let shader;
+        if (script.type === "x-shader/x-vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+        } else if (script.type === "x-shader/x-fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+        } else {
+            return null;
+        }
+
+        gl.shaderSource(shader, shaderString);
+        gl.compileShader(shader);
+
+        // Ensure the shader is valid
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            console.error(gl.getShaderInfoLog(shader));
+            return null;
+        }
+
+        return shader;
+    }
+
+    function initProgram() {
+        const vertexShader = getShader('vertex-shader');
+        const fragmentShader = getShader('fragment-shader');
+
+        // Create a program
+        program = gl.createProgram();
+        // Attach the shaders to this program
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error('Could not initialize shaders');
+        }
+        // Use this program instance
+        gl.useProgram(program);
+        program.aVertexPosition = gl.getAttribLocation(program, 'aVertexPosition');
+        program.vColorPosition = gl.getAttribLocation(program, 'vColor');
+        // program.gScaleLocation = gl.getUniformLocation(program, "gScale");
+    }
+
+    function initBuffers() {
+        var vertices = [
+            vec3(0.0000, 0.0000, -1.0000),
+            vec3(0.0000, 0.9428, 0.3333),
+            vec3(-0.8165, -0.4714, 0.3333),
+            vec3(0.8165, -0.4714, 0.3333)
+        ];
+        divideTetra(vertices[0], vertices[1], vertices[2], vertices[3],
+            NumTimesToSubdivide);
+
+
+        colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.STATIC_DRAW);
+
+
+
+        dotVertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, dotVertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, flatten(points), gl.STATIC_DRAW);
+
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
+
+    function triangle(a, b, c, color) {
+
+        // add colors and vertices for one triangle
+
+        var baseColors = [
+            vec3(1.0, 0.0, 0.0),
+            vec3(0.0, 1.0, 0.0),
+            vec3(0.0, 0.0, 1.0),
+            vec3(0.0, 0.0, 0.0)
+        ];
+
+        colors.push(baseColors[color]);
+        points.push(a);
+        colors.push(baseColors[color]);
+        points.push(b);
+        colors.push(baseColors[color]);
+        points.push(c);
+    }
+
+    function tetra(a, b, c, d) {
+        // tetrahedron with each side using
+        // a different color
+
+        triangle(a, c, b, 0);
+        triangle(a, c, d, 1);
+        triangle(a, b, d, 2);
+        triangle(b, c, d, 3);
+    }
+
+    function divideTetra(a, b, c, d, count) {
+        // check for end of recursion
+
+        if (count === 0) {
+            tetra(a, b, c, d);
+        }
+
+        // find midpoints of sides
+        // divide four smaller tetrahedra
+
+        else {
+            var ab = mix(a, b, 0.5);
+            var ac = mix(a, c, 0.5);
+            var ad = mix(a, d, 0.5);
+            var bc = mix(b, c, 0.5);
+            var bd = mix(b, d, 0.5);
+            var cd = mix(c, d, 0.5);
+
+            --count;
+
+            divideTetra(a, ab, ac, ad, count);
+            divideTetra(ab, b, bc, bd, count);
+            divideTetra(ac, bc, c, cd, count);
+            divideTetra(ad, bd, cd, d, count);
+        }
+    }
+
+    function draw() {
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, dotVertexBuffer);
+        gl.vertexAttribPointer(program.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(program.aVertexPosition);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.vertexAttribPointer(program.vColorPosition, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(program.vColorPosition);
+
+        // scale += 0.001;
+        // console.log(Math.sin(scale));
+        // gl.uniform1f(program.gScaleLocation, Math.sin(scale));
+
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, points.length);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+
+    }
+
+    window.onload = main;
+</script>
+
+</html>
