@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+    <canvas id="canvas" width=600 height=600 style="border: 1px grey solid">
+
+    </canvas>
+    <script src="vec3.js"></script>
+    <script src="color.js"></script>
+    <script src="ray.js"></script>
+    <script src="hitRecord.js"></script>
+    <script src="sphere.js"></script>
+    <script src="spherelist.js"></script>
+
+    <script>
+        var canvas = document.getElementById("canvas");
+        var context = canvas.getContext("2d");
+        var imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        var colorWidth = 4;
+        var rowWidth = imageData.width * colorWidth;
+
+        var viewportSize = 1;
+        var projectionPlaneZ = 1;
+        var cameraPosition = new Vec3(0, 0, 0);
+        var backgroundColor = new Color(255, 255, 255);
+        var spheres = [
+            new Sphere(new Vec3(0, -1, 1), 1, new Color(255, 0, 0)),
+            new Sphere(new Vec3(2, 0, 2), 1, new Color(0, 0, 255)),
+            new Sphere(new Vec3(-2, 0, 2), 1, new Color(0, 255, 0))];
+
+        var sphereList = new SphereList(spheres);
+
+        var PutPixel = function (x, y, color) {
+            if (x < 0 || x > canvas.width || y < 0 || y > canvas.height) {
+                return;
+            }
+            var offset = colorWidth * x + rowWidth * y;
+            imageData.data[offset++] = color.r;
+            imageData.data[offset++] = color.g;
+            imageData.data[offset++] = color.b;
+            imageData.data[offset++] = color.a;
+        }
+        var CanvasToViewport = function (x, y) {
+            return new Vec3((x - canvas.width / 2) / (canvas.width / 2) * viewportSize,
+                (canvas.height / 2 - y) / (canvas.height / 2) * viewportSize,
+                projectionPlaneZ)
+
+        }
+        var render = function () {
+            for (var x = 0; x < canvas.width; x += 1) {
+                for (var y = 0; y < canvas.height; y += 1) {
+                    var direction = CanvasToViewport(x, y);
+                    var color = backgroundColor;
+                    var ray = new Ray(cameraPosition, direction);
+                    var rec = sphereList.hit(ray, 1, Infinity);
+                    if (rec != null) {
+                        color = rec.shape.color;
+                    }
+                    PutPixel(x, y, color);
+                }
+            }
+            context.putImageData(imageData, 0, 0);
+        }
+
+        window.onload = render;
+    </script>
+</body>
+
+</html>

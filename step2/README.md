@@ -9,6 +9,7 @@ WebGL编程除了需要使用Javascript语言来进行函数调用外，还需�
 #version 300 es
 // 设置GPU在计算数据时应该使用的精度， highp表示高精度，lowp表示低精度， mediump在两者之间。
 precision mediump float;
+// 
 in vec3 aVertexPosition;
 void main(void) {
     gl_Position = vec4(aVertexPosition, 1.0);
